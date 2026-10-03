@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drone Viewer</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; margin: 0; padding: 1rem; }
+    #wrap { position: relative; display: inline-block; }
+    video, canvas { max-width: 100%; display: block; }
+    canvas { position: absolute; inset: 0; } /* draw face boxes here */
+  </style>
+</head>
+<body>
+  <h1>Drone Viewer</h1>
+  <div class="status-row">
+    <p id="status">Connecting...</p>
+    <div id="loader" class="loader" role="status" aria-label="Loading video"></div>
+  </div>
+  <div id="wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <script type="module">
+    import { getIceServers, openSignaling } from "/rtc.js";
+
+    const room = new URLSearchParams(location.search).get("room") || "drone1";
+    const status = document.getElementById("status");
+    const video = document.getElementById("video");
+    const loader = document.getElementById("loader");
+    const iceServers = await getIceServers();
+    let pc;
+
+    const sig = openSignaling(room, "viewer", async (msg) => {
+      switch (msg.type) {
+        case "joined":
+          status.textContent = `Waiting for drone in room "${room}"...`;
+          break;
+        case "full":
+          status.textContent = "Room already has a viewer.";
+          break;
+        case "offer":
+          pc?.close();
+          pc = new RTCPeerConnection({ iceServers });
+          pc.ontrack = (e) => { video.srcObject = e.streams[0]; };
+          video.onplaying = () => { loader.hidden = true; };
+          pc.onicecandidate = (e) => e.candidate && sig.send({ type: "ice", candidate: e.candidate });
+          pc.onconnectionstatechange = () => { status.textContent = `Connection: ${pc.connectionState}`; };
+          await pc.setRemoteDescription(msg.sdp);
+          await pc.setLocalDescription(await pc.createAnswer());
+          sig.send({ type: "answer", sdp: pc.localDescription });
+          break;
+        case "ice":
+          await pc?.addIceCandidate(msg.candidate);
+          break;
+        case "peer-left":
+          status.textContent = "Drone disconnected.";
+          break;
+      }
+    });
+
+    // TODO (face recognition): run detection on #video here, draw boxes on #overlay,
+    // and POST each recognized face to /api/sightings.
+  </script>
+</body>
+</html>

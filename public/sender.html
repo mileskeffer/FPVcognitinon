@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fake Drone (webcam sender)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; margin: 0; padding: 1rem; }
+    video { max-width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>Fake Drone (webcam sender)</h1>
+  <p>Stands in for the drone while testing. Camera access needs HTTPS or localhost.</p>
+  <p id="status">Starting camera...</p>
+  <video id="preview" autoplay playsinline muted></video>
+
+  <script type="module">
+    import { getIceServers, openSignaling } from "/rtc.js";
+
+    const room = new URLSearchParams(location.search).get("room") || "drone1";
+    const status = document.getElementById("status");
+    const iceServers = await getIceServers();
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    document.getElementById("preview").srcObject = stream;
+    let pc;
+
+    const sig = openSignaling(room, "drone", async (msg) => {
+      switch (msg.type) {
+        case "joined":
+          status.textContent = `In room "${room}". Waiting for a viewer...`;
+          break;
+        case "full":
+          status.textContent = "Room already has a drone.";
+          break;
+        case "ready": // a viewer is present: start a fresh connection and send an offer
+          pc?.close();
+          pc = new RTCPeerConnection({ iceServers });
+          stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+          pc.onicecandidate = (e) => e.candidate && sig.send({ type: "ice", candidate: e.candidate });
+          pc.onconnectionstatechange = () => { status.textContent = `Connection: ${pc.connectionState}`; };
+          await pc.setLocalDescription(await pc.createOffer());
+          sig.send({ type: "offer", sdp: pc.localDescription });
+          break;
+        case "answer":
+          await pc.setRemoteDescription(msg.sdp);
+          break;
+        case "ice":
+          await pc?.addIceCandidate(msg.candidate);
+          break;
+        case "peer-left":
+          status.textContent = "Viewer left. Waiting...";
+          break;
+      }
+    });
+  </script>
+</body>
+</html>
