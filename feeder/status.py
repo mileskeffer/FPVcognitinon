@@ -72,12 +72,16 @@ def main():
 
     names = args.names.split(',')
     print(f" |___ Names: {names}")
+    print("="*50)
 
-    while True:
-        ping_times = get_ping_times(targets, names)
-        print(f"[*] Ping-Times: {ping_times}")
+    try:
+        while True:
+            ping_times = get_ping_times(targets, names)
+            print(f"[*] Ping-Times: {ping_times}")
 
-        send_stats(ping_times, names)
+            send_stats(ping_times, names)
+    except KeyboardInterrupt:
+        print("\n[*] SIGINT...")
 
 if __name__ == "__main__":
     main()
