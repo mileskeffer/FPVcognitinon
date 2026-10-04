@@ -32,6 +32,7 @@
     const loader = document.getElementById("loader");
     const iceServers = await getIceServers();
     let pc;
+    let pendingIceCandidates = [];
 
     const sig = openSignaling(room, "viewer", async (msg) => {
       switch (msg.type) {
@@ -44,16 +45,20 @@
         case "offer":
           pc?.close();
           pc = new RTCPeerConnection({ iceServers });
+          pendingIceCandidates = [];
           pc.ontrack = (e) => { video.srcObject = e.streams[0]; };
           video.onplaying = () => { loader.hidden = true; };
           pc.onicecandidate = (e) => e.candidate && sig.send({ type: "ice", candidate: e.candidate });
           pc.onconnectionstatechange = () => { status.textContent = `Connection: ${pc.connectionState}`; };
           await pc.setRemoteDescription(msg.sdp);
+          for (const candidate of pendingIceCandidates) await pc.addIceCandidate(candidate);
+          pendingIceCandidates = [];
           await pc.setLocalDescription(await pc.createAnswer());
           sig.send({ type: "answer", sdp: pc.localDescription });
           break;
         case "ice":
-          await pc?.addIceCandidate(msg.candidate);
+          if (pc?.remoteDescription) await pc.addIceCandidate(msg.candidate);
+          else pendingIceCandidates.push(msg.candidate);
           break;
         case "peer-left":
           status.textContent = "Drone disconnected.";
