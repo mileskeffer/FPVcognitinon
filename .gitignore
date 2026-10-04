@@ -1,7 +1,20 @@
-.pio/
+node_modules/
+dataset/
 .venv/
+
+# Python / PlatformIO build output (same as main)
 __pycache__/
 *.py[cod]
+.pio/
+
+# Secrets: copy wifi_credentials.example.h to this name locally
 firmware/air75_wifi_bridge/include/wifi_credentials.h
+
+# Firmware dumps and flight logs (same as main)
 backups/*.bin
 logs/
+
+# face_id: downloaded/trained models and enrolled (biometric) photos
+face_id/models/
+face_id/known_faces/
+face_id/screenshots/
