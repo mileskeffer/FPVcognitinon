@@ -1,0 +1,7 @@
+.pio/
+.venv/
+__pycache__/
+*.py[cod]
+firmware/air75_wifi_bridge/include/wifi_credentials.h
+backups/*.bin
+logs/

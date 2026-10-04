@@ -1,0 +1,34 @@
+Air75 II Wi-Fi bridge props-off bring-up record
+===============================================
+
+Receiver MCU: ESP8285H16
+Receiver target before replacement: UNIFIED_ESP8285_2400_RX
+Flight controller: BETAFPVG473_V2 / STM32G474xx / BMI270
+Receiver UART: UART3, CRSF, non-inverted, full duplex
+
+Wi-Fi adapter: Realtek RTL8188EU (TP-Link TL-WN725N)
+Access point: Air75-Control, WPA2-Personal, 2.4 GHz channel 6
+ESP address: 192.168.4.1
+Adapter address: 192.168.4.2
+Observed signal: 100 percent during bench test
+Ping: successful, 1 ms observed
+
+Disarmed UDP smoke test:
+state=DISARMED
+link_ok=True
+last_ack_sequence=149
+
+Betaflight MSP_RC values in internal RPYT order:
+roll=1500
+pitch=1500
+yaw=1500
+throttle=999
+aux1=999
+aux2=1999
+
+Packet-output stop test:
+RX rate: 0
+Arming disable flags included RXLOSS
+
+No propellers were used by the automated tests. No arm command was sent.
+Flight performance, interference tolerance, and usable range remain untested.

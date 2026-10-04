@@ -1,0 +1,47 @@
+Logitech F310 control scheme
+============================
+
+Set the switch on the back of the F310 to X (XInput) before starting the
+program. The default pygame layout detected for this controller is:
+
+- Axis 0, left stick X: roll left/right.
+- Axis 1, left stick Y: pitch forward/backward.
+- Axis 2, right stick X: yaw left/right.
+- Axis 3, right stick Y: unused.
+- Axis 4, left trigger: descend input, resting at -1.
+- Axis 5, right trigger: climb input, resting at -1.
+- Right trigger: proportionally increase throttle above the configured neutral
+  throttle.
+- Left trigger: proportionally reduce throttle toward 1000.
+- Hold Start for three continuous seconds: request ARM. The link must already
+  report DISARMED, the sticks must be centered, and both triggers must be
+  released. Throttle stays at 1000 until the ESP acknowledges ARMED.
+- Press Start while armed: immediately request DISARM.
+- B: backup immediate DISARM.
+- Back: emergency KILL, followed by stopped packet output so Betaflight enters
+  its configured failsafe.
+- Escape or closing the window: stop packet output and invoke Betaflight
+  failsafe.
+
+Neutral throttle and "hover"
+----------------------------
+
+When neither trigger is pressed, the program returns to --hover-throttle. The
+safe default is 1000, which means motor idle rather than automatic hover:
+
+   .\.venv\Scripts\python.exe gamepad_control.py --bind-ip 192.168.4.2
+
+After a measured, controlled calibration, a different neutral throttle can be
+selected explicitly, for example:
+
+   .\.venv\Scripts\python.exe gamepad_control.py --bind-ip 192.168.4.2 --hover-throttle 1250
+
+The Air75 II has no altitude measurement in this project. A fixed throttle
+cannot maintain a position or altitude as battery voltage, payload, airflow,
+and ground effect change. ANGLE mode levels roll and pitch; it does not provide
+altitude hold. Treat --hover-throttle as a throttle setpoint, not an autonomous
+hover mode.
+
+Before installing propellers, verify every axis, both triggers, Start-hold
+arming, Start/B disarming, Back kill, controller disconnect, and Wi-Fi
+disconnect in Betaflight and during a secured motor test.

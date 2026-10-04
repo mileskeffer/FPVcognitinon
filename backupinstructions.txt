@@ -1,0 +1,172 @@
+Air75 II firmware backup instructions
+=====================================
+
+The Air75 II contains separate firmware/configuration for the STM32 flight
+controller and the ESP8285 ExpressLRS receiver. Preserve both before installing
+the custom Wi-Fi receiver firmware.
+
+
+1. Download the BETAFPV flight-controller firmware
+---------------------------------------------------
+
+BETAFPV Air75 II support page:
+https://support.betafpv.com/hc/en-us/articles/54653618858521-CLI-and-Firmware-for-Air75-II
+
+Download the .hex and CLI files matching all of the following:
+
+- Air75 II Champion, Racing, or Freestyle
+- The exact gyro fitted to the board, such as BMI270, ICM42688, ICM42622,
+  or LSM6DSV16X
+- The board revision and firmware version currently installed
+
+Do not substitute ordinary Betaflight firmware. Some Air75 II gyro revisions
+require BETAFPV's customized Betaflight build.
+
+
+2. Export the Betaflight configuration
+--------------------------------------
+
+Remove the propellers, connect with the BETAFPV-supported Betaflight
+Configurator, and save the output of these CLI commands:
+
+version
+status
+diff all
+dump all
+
+Also record or screenshot:
+
+- Ports configuration
+- Receiver mode, provider, and channel map
+- Modes and AUX ranges
+- Failsafe settings
+- Flight-controller target and firmware version
+- Gyro model
+- Air75 II propulsion variant
+
+
+3. Record the ExpressLRS receiver information
+----------------------------------------------
+
+Before replacing ExpressLRS, open its receiver Web UI and record or export:
+
+- Firmware version
+- Hardware/target name
+- UID and binding settings
+- Receiver options
+- Wi-Fi settings
+- Hardware Layout page, if available
+
+The expected recovery target is normally:
+
+BETAFPV 2.4GHz AIO RX
+
+Verify this against the receiver's Web UI instead of assuming it is correct.
+
+
+4. Make a complete ESP8285 flash backup
+---------------------------------------
+
+The ExpressLRS Web UI does not normally offer a download-current-firmware
+button. The most complete backup is a full 1 MB ESP8285 flash dump made with
+Espressif esptool.
+
+The following commands require a direct serial path to the ESP8285 ROM
+bootloader. Use either:
+
+- A verified Betaflight serial-passthrough connection, or
+- A 3.3 V USB-to-UART adapter connected according to the board pinout, with
+  RX-BOOT grounded during power-up
+
+Do not assume the normal flight-controller USB COM port is the ESP serial port.
+Do not connect a 5 V UART signal to ESP8285 logic pins.
+
+Install the flashing/backup tools in the project virtual environment:
+
+   .\.venv\Scripts\python -m pip install -r requirements-flashing.txt
+
+For this Air75 II, the repository includes a read-only helper which validates
+the Betaflight receiver settings, enables UART3 passthrough, asks the running
+ExpressLRS firmware to enter the ESP8285 ROM bootloader, and reads the full
+flash. Make two independent reads with a power cycle between them:
+
+   .\.venv\Scripts\python tools\backup_esp8285.py --port COM4 --uart UART3
+
+Power-cycle the board, then compare the second read with the path printed by
+the first command:
+
+   .\.venv\Scripts\python tools\backup_esp8285.py --port COM4 --uart UART3 --compare-with backups\air75ii-esp8285-DATE_TIME-a.bin
+
+The helper contains no erase or write command. It refuses to overwrite an
+existing backup and verifies that both independent 1 MB reads have matching
+SHA-256 hashes. Power-cycle the flight controller after each read.
+
+If a read is interrupted after the helper has entered passthrough and the ROM
+loader is still active, resume without trying to reopen the Betaflight CLI:
+
+   .\.venv\Scripts\python tools\backup_esp8285.py --port COM4 --resume
+
+For a manual direct-UART backup, confirm communication, replacing COM5 with
+the correct direct ESP port:
+
+   py -m esptool --chip esp8266 --port COM5 flash-id
+
+Read the entire 1 MB flash twice:
+
+   py -m esptool --chip esp8266 --port COM5 --baud 115200 read-flash 0 0x100000 air75ii-esp8285-backup-a.bin
+
+   py -m esptool --chip esp8266 --port COM5 --baud 115200 read-flash 0 0x100000 air75ii-esp8285-backup-b.bin
+
+Verify that the two reads have identical SHA-256 hashes in PowerShell:
+
+   Get-FileHash .\air75ii-esp8285-backup-a.bin -Algorithm SHA256
+   Get-FileHash .\air75ii-esp8285-backup-b.bin -Algorithm SHA256
+
+Do not flash the custom firmware until the two backup hashes match.
+
+Keep the flash backup somewhere private and outside a public repository. It may
+contain ExpressLRS binding data and saved Wi-Fi credentials.
+
+Official esptool read-flash documentation:
+https://docs.espressif.com/projects/esptool/en/latest/esp8266/esptool/basic-commands.html
+
+
+5. Prepare an ExpressLRS recovery image
+---------------------------------------
+
+If a complete binary dump cannot be made, ExpressLRS Configurator can build a
+functional recovery image. Select:
+
+- Device category: BETAFPV
+- Device target: BETAFPV 2.4GHz AIO RX
+- Firmware version: the same release currently reported by the receiver,
+  whenever available
+- Flash method: BetaflightPassthrough
+
+Use the recorded binding phrase/options when building the recovery image.
+
+This recovery build may not be byte-for-byte identical to BETAFPV's factory
+image, which is why a full esptool dump is preferable.
+
+ExpressLRS receiver updating guide:
+https://www.expresslrs.org/quick-start/receivers/updating/
+
+ExpressLRS receiver recovery guide:
+https://www.expresslrs.org/quick-start/unbricking/
+
+
+6. Minimum files to preserve
+----------------------------
+
+Store these together in a private backup location:
+
+- air75ii-esp8285-backup-a.bin
+- SHA-256 hash of the matching backup
+- BETAFPV Air75 II .hex file for the exact gyro and propulsion variant
+- BETAFPV CLI file for the same variant
+- Betaflight version.txt, status.txt, diff-all.txt, and dump-all.txt
+- ExpressLRS version, target, options, UID, and Hardware Layout screenshots
+- Clear photos of both sides of the flight controller and the RX-BOOT pad
+
+The custom Wi-Fi firmware belongs only on the ESP8285 receiver processor. Never
+upload it with Betaflight's STM32 firmware flasher.
