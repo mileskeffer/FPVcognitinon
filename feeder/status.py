@@ -35,13 +35,13 @@ def get_ping_times(targets, names, count: int = 4, timeout_s: int = 2):
                 timeout=4 * (timeout_s + 1) + 5,
             ).stdout
         except subprocess.TimeoutExpired:
-            ping_times.append(None)
+            ping_times.append("Unreachable")
 
         print(out)
 
         # Linux/macOS: "rtt min/avg/max/mdev = 9.1/10.2/11.9/0.8 ms"
         m = re.search(r"= [\d.]+/([\d.]+)/[\d.]+/[\d.]+ ms", out)
-        ping_times.append(float(m.group(1)) if m else None)
+        ping_times.append(float(m.group(1)) if m else "Unreachable")
     return ping_times
 
 import requests
