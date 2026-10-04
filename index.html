@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pi Camera Stream</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body class="stream-page">
+    <div class="stream-layout">
+        <div class="video-panel">
+            <iframe class="camera-frame" src="http://192.168.0.196:8889/cam?controls=false&muted=true&autoplay=true&playsinline=true" allow="autoplay">
+            </iframe>
+            <p id="ping">Pi ping: checking...</p>
+        </div>
+        <section class="controls" aria-label="Movement controls">
+            <h2>Movement</h2>
+            <div class="d-pad">
+                <button type="button" data-command="rotate-left" aria-label="Rotate left">&#8634;</button>
+                <button type="button" data-command="forward" aria-label="Move forward">&#8593;</button>
+                <button type="button" data-command="rotate-right" aria-label="Rotate right">&#8635;</button>
+                <button type="button" data-command="left" aria-label="Move left">&#8592;</button>
+                <button type="button" data-command="back" aria-label="Move back">&#8595;</button>
+                <button type="button" data-command="right" aria-label="Move right">&#8594;</button>
+            </div>
+            <p id="control-status">Ready</p>
+        </section>
+
+    </div>
+
+    <div>
+        <section class="ping-stats">
+            <table>
+                <thead><tr><th>Name</th><th>Avg (ms)</th></tr></thead>
+                <tbody id="times"></tbody>
+            </table>
+        </section>
+    </div>
+    
+    <script>
+        const controlStatus = document.getElementById("control-status");
+
+        async function sendControl(command) {
+            controlStatus.textContent = `Sending: ${command}`;
+            try {
+                const response = await fetch("/api/control", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ command })
+                });
+                const result = await response.json();
+                controlStatus.textContent = result.ok
+                    ? `Command sent: ${command}`
+                    : `Control unavailable: ${result.error}`;
+            } catch {
+                controlStatus.textContent = "Control unavailable";
+            }
+        }
+
+        document.querySelectorAll("[data-command]").forEach((button) => {
+            button.addEventListener("click", () => sendControl(button.dataset.command));
+        });
+
+        document.addEventListener("keydown", (event) => {
+            const commands = {
+                ArrowUp: "forward",
+                ArrowDown: "back",
+                ArrowLeft: "left",
+                ArrowRight: "right",
+                q: "rotate-left",
+                e: "rotate-right"
+            };
+            const command = commands[event.key];
+            if (command) {
+                event.preventDefault();
+                sendControl(command);
+            }
+        });
+
+        async function updatePing() {
+            const started = performance.now();
+            const ping = document.getElementById("ping");
+            try {
+                await fetch(`/api/ping?t=${Date.now()}`, { cache: "no-store" });
+                ping.textContent = `Pi ping: ${Math.round(performance.now() - started)} ms`;
+            } catch {
+                ping.textContent = "Pi ping: unavailable";
+            }
+        }
+
+        updatePing();
+        setInterval(updatePing, 2000);
+
+        async function loadPingTimes() {
+            const times = await (await fetch("/api/stats")).json();
+            document.getElementById("times").innerHTML = times
+            .map(t => `<tr><td>${t.name}</td><td>${t.time}</td></tr>`)
+            .join("");
+        }
+
+        loadPingTimes();
+        setInterval(loadPingTimes, 100); // refreshes n milliseconds
+    </script>
+</body>
+
+</html>

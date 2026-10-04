@@ -1,0 +1,119 @@
+.stream-page {
+  --pumpkin: #F47C20;
+  --crimson: #B1282A;
+  --autumn-gold: #D9A441;
+  margin: 0;
+  padding: 16px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: #3a231a;
+  color: #F7E7CE;
+  font-family: Georgia, serif;
+}
+
+.camera-frame {
+  display: block;
+  width: min(1280px, 100%);
+  aspect-ratio: 16 / 9;
+  border: 2px solid var(--pumpkin);
+  border-radius: 4px;
+  box-shadow: 0 0 0 4px var(--crimson);
+}
+
+.stream-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+}
+
+.video-panel {
+  flex: 1 1 640px;
+  min-width: 0;
+}
+
+.stream-page #ping {
+  color: var(--autumn-gold);
+  font-weight: 600;
+}
+
+.controls {
+  order: 0;
+  flex: 0 0 280px;
+  padding: 16px;
+  border: 1px solid var(--crimson);
+  border-radius: 8px;
+  background: #211512;
+}
+
+.controls h2 {
+  margin: 0 0 12px;
+  color: var(--pumpkin);
+  font-size: 1.1rem;
+}
+
+.d-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 56px);
+  gap: 8px;
+  justify-content: center;
+}
+
+.d-pad button {
+  border: 1px solid var(--pumpkin);
+  border-radius: 6px;
+  background: #3a231a;
+  color: var(--autumn-gold);
+  cursor: pointer;
+  font-size: 1.6rem;
+}
+
+.d-pad button:nth-child(1) { grid-column: 1; grid-row: 1; }
+.d-pad button:nth-child(2) { grid-column: 2; grid-row: 1; }
+.d-pad button:nth-child(3) { grid-column: 3; grid-row: 1; }
+.d-pad button:nth-child(4) { grid-column: 1; grid-row: 2; }
+.d-pad button:nth-child(5) { grid-column: 2; grid-row: 2; }
+.d-pad button:nth-child(6) { grid-column: 3; grid-row: 2; }
+
+.d-pad button:hover,
+.d-pad button:focus-visible {
+  background: var(--crimson);
+  color: #fff;
+}
+
+#control-status {
+  margin: 12px 0 0;
+  color: #F7E7CE;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 800px) {
+  .stream-layout { flex-direction: column; align-items: stretch; }
+  .controls { order: 0; flex-basis: auto; width: 100%; box-sizing: border-box; }
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.status-row p {
+  margin: 0;
+}
+
+.loader {
+  border: 4px solid #f3f3f3; /* Light grey */
+  border-top: 4px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
