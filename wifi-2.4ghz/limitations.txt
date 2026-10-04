@@ -1,0 +1,40 @@
+Wi-Fi 2.4 GHz control: limitations
+==================================
+
+How it works: the PC sends controls over Wi-Fi to the drone's small ESP8285
+chip, which passes them to the flight controller. That chip normally runs the
+drone's ExpressLRS radio receiver; this project replaced its firmware.
+
+1. The motors drown out the Wi-Fi (the main problem)
+   - With the motors off, the link is strong and reliable.
+   - Once the motors spin up, the link keeps dropping for a quarter to half a
+     second at a time. It cuts out before the motors reach enough power to
+     lift off, so the drone cannot actually fly this way.
+   - The Wi-Fi chip and its tiny antenna sit right next to the motor
+     controllers, which give off a lot of electrical noise.
+
+2. Wi-Fi is the wrong kind of radio for this
+   - Drone radios like ExpressLRS are built to push through that noise.
+     Wi-Fi is not.
+   - Slowing Wi-Fi down to make it more robust made things worse: the link
+     failed almost immediately after arming.
+
+3. The safety cut-off is strict
+   - If no signal arrives for a quarter of a second, the drone stops and needs
+     a restart. Making that window longer would hide the dropouts, but the
+     drone would keep its last throttle for longer with no control.
+
+4. Self-levelling was never on
+   - A setting in the Wi-Fi firmware put the drone in a mode with no automatic
+     levelling, so every Wi-Fi test flew without it.
+
+5. The PC adds its own hiccups
+   - Windows pauses Wi-Fi now and then to look for other networks or save
+     power, and its timer makes the sends slightly uneven.
+   - The laptop's built-in Wi-Fi sits next to the USB adapter and can
+     interfere with it.
+
+6. Updates are fragile
+   - Firmware can be updated over Wi-Fi, but a bad update that stops the Wi-Fi
+     from starting means falling back to a wired flash, which was unreliable on
+     this board.

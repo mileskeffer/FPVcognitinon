@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Air75 Control</title>
+<style>
+  :root {
+    --bg: #0f1114; --panel: #181b20; --line: #2a2f37; --text: #e8e9eb; --muted: #8b929c;
+    --btn: #232831; --btn-on: #3d6df2; --go: #2fa866; --warn: #e0a92e; --bad: #e04848;
+  }
+  * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  html, body { background: var(--bg); color: var(--text); margin: 0; }
+  body { font: 15px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; padding: 16px; max-width: 1280px; margin: 0 auto; }
+
+  .layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 980px) {
+    .layout { grid-template-columns: minmax(0, 1fr) 420px; align-items: start; }
+    .video-col { position: sticky; top: 16px; }
+  }
+
+  /* ---- video ---- */
+  .video { position: relative; aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--line);
+           border-radius: 14px; overflow: hidden; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .video .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted);
+                  font-size: 14px; text-align: center; padding: 16px; }
+  .hud { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; pointer-events: none; }
+  .hud span { background: rgba(0,0,0,.6); border-radius: 6px; padding: 3px 8px; font-size: 13px;
+              font-variant-numeric: tabular-nums; font-weight: 600; }
+  .hud .ok { color: var(--go); } .hud .warn { color: var(--warn); } .hud .bad { color: var(--bad); }
+  .video-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 8px;
+               color: var(--muted); font-size: 12px; gap: 8px; }
+  .video-bar a { color: var(--muted); }
+  .video-bar button { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+
+  /* ---- status ---- */
+  h1 { font-size: 18px; margin: 0 0 12px; font-weight: 600; letter-spacing: .02em; }
+  .status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  .chip small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  .chip b { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .chip.ok b { color: var(--go); } .chip.warn b { color: var(--warn); } .chip.bad b { color: var(--bad); }
+  .note { min-height: 22px; color: var(--muted); margin-bottom: 14px; font-size: 14px; }
+
+  /* ---- controls ---- */
+  button { font: inherit; color: var(--text); background: var(--btn); border: 1px solid var(--line);
+           border-radius: 12px; cursor: pointer; touch-action: none; }
+  button.on, button:active { background: var(--btn-on); border-color: var(--btn-on); }
+
+  .cmds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+  .cmds button { padding: 14px 6px; font-weight: 600; }
+  #takeoff { background: #1d3a29; border-color: #2c5a3f; }
+  #land { background: #3a321d; border-color: #5a4d2c; }
+  #kill { background: var(--bad); border-color: var(--bad); color: #fff; font-size: 17px; }
+
+  .pads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .pad { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+  .pad h2 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 8px; font-weight: 600; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 60px); gap: 6px; }
+  .grid3 button { font-size: 13px; padding: 0 2px; }
+  .n { grid-column: 2; grid-row: 1; } .w { grid-column: 1; grid-row: 2; }
+  .e { grid-column: 3; grid-row: 2; } .s { grid-column: 2; grid-row: 3; }
+
+  .sliders { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+  .sliders label { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .sliders label span { color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--btn-on); height: 28px; }
+
+  .keys { color: var(--muted); font-size: 12px; line-height: 1.7; }
+  kbd { background: var(--btn); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; color: var(--text); }
+
+  @media (max-width: 520px) {
+    body { padding: 12px; }
+    .status { grid-template-columns: repeat(2, 1fr); }
+    .pads { gap: 8px; }
+    .grid3 { grid-template-rows: repeat(3, 54px); }
+    .keys { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <div class="video-col">
+    <div class="video">
+      <div class="empty" id="video-empty">Connecting to camera...</div>
+      <iframe id="video" allow="autoplay; fullscreen" title="Drone camera"></iframe>
+      <div class="hud">
+        <span id="hud-drone">...</span>
+        <span id="hud-thr">...</span>
+      </div>
+    </div>
+    <div class="video-bar">
+      <span id="video-src"></span>
+      <button id="video-reload" type="button">Reload video</button>
+    </div>
+  </div>
+
+  <div class="ctl-col">
+    <h1>Air75 Control</h1>
+
+    <div class="status">
+      <div class="chip" id="c-server"><small>Pi</small><b id="v-server">...</b></div>
+      <div class="chip" id="c-drone"><small>Drone</small><b id="v-drone">...</b></div>
+      <div class="chip"><small>Mode</small><b id="v-mode">...</b></div>
+      <div class="chip"><small>Throttle</small><b id="v-thr">...</b></div>
+    </div>
+    <div class="note" id="note"></div>
+
+    <div class="cmds">
+      <button id="takeoff" data-cmd="takeoff">Takeoff</button>
+      <button id="land" data-cmd="land">Land</button>
+      <button data-cmd="reset">Reset</button>
+      <button id="kill" data-cmd="kill">KILL</button>
+    </div>
+
+    <div class="pads">
+      <div class="pad">
+        <h2>Altitude / Turn</h2>
+        <div class="grid3">
+          <button class="n" data-axis="climb" data-val="1">Up</button>
+          <button class="w" data-axis="yaw" data-val="-1">Turn L</button>
+          <button class="e" data-axis="yaw" data-val="1">Turn R</button>
+          <button class="s" data-axis="climb" data-val="-1">Down</button>
+        </div>
+      </div>
+      <div class="pad">
+        <h2>Move</h2>
+        <div class="grid3">
+          <button class="n" data-axis="pitch" data-val="1">Forward</button>
+          <button class="w" data-axis="roll" data-val="-1">Left</button>
+          <button class="e" data-axis="roll" data-val="1">Right</button>
+          <button class="s" data-axis="pitch" data-val="-1">Back</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sliders">
+      <label>Hover throttle <span id="v-hover">1350</span></label>
+      <input type="range" id="hover" min="1150" max="1700" step="5" value="1350">
+      <label>Move speed (tilt) <span id="v-tilt">80</span></label>
+      <input type="range" id="tilt" min="20" max="200" step="5" value="80">
+    </div>
+
+    <div class="keys">
+      Keyboard: <kbd>Arrows</kbd> move, <kbd>W</kbd>/<kbd>S</kbd> up/down, <kbd>A</kbd>/<kbd>D</kbd> turn,
+      <kbd>T</kbd> takeoff, <kbd>L</kbd> land, <kbd>R</kbd> reset, <kbd>Space</kbd> KILL.
+      Releasing a button re-centers. Closing this tab makes the drone descend on its own.
+    </div>
+  </div>
+
+</div>
+
+<script>
+const intent = { pitch: 0, roll: 0, yaw: 0, climb: 0 };
+let ws = null;
+let synced = false;   // sliders take the server's values on first status after connect
+
+const $ = (id) => document.getElementById(id);
+
+// ---------------- video ----------------
+const PLAYER_OPTS = "controls=false&muted=true&autoplay=true&playsinline=true";
+let videoUrl = "";
+
+function defaultVideoUrl() {
+  return `${location.protocol}//${location.hostname}:8889/cam/`;
+}
+function withOpts(url) {
+  return url + (url.includes("?") ? "&" : "?") + PLAYER_OPTS;
+}
+function loadVideo() {
+  $("video-empty").textContent = "Connecting to camera...";
+  $("video").src = "about:blank";
+  setTimeout(() => { $("video").src = withOpts(videoUrl); }, 50);
+  $("video-src").innerHTML = `Source: <a href="${videoUrl}" target="_blank" rel="noopener">${videoUrl}</a>`;
+}
+$("video").addEventListener("load", () => { $("video-empty").textContent = "No signal from camera"; });
+$("video-reload").addEventListener("click", loadVideo);
+
+fetch("/config.json")
+  .then((r) => r.json())
+  .then((c) => { videoUrl = c.video_url || defaultVideoUrl(); })
+  .catch(() => { videoUrl = defaultVideoUrl(); })
+  .finally(loadVideo);
+
+// ---------------- control link ----------------
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+function connect() {
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.onopen = () => { synced = false; setChip("c-server", "v-server", "online", "ok"); };
+  ws.onclose = () => {
+    setChip("c-server", "v-server", "offline", "bad");
+    setChip("c-drone", "v-drone", "?", "bad");
+    setHud("PI OFFLINE", "bad", "");
+    setTimeout(connect, 500);
+  };
+  ws.onmessage = (e) => render(JSON.parse(e.data));
+}
+
+function setChip(chipId, valId, text, cls) {
+  $(valId).textContent = text;
+  $(chipId).className = "chip " + cls;
+}
+function setHud(text, cls, thr) {
+  $("hud-drone").textContent = text;
+  $("hud-drone").className = cls;
+  $("hud-thr").textContent = thr;
+  $("hud-thr").style.display = thr ? "" : "none";
+}
+
+function render(s) {
+  const cls = s.drone === "DISARMED" || s.drone === "ARMED" ? "ok" : s.drone === "NO LINK" ? "bad" : "warn";
+  setChip("c-drone", "v-drone", s.drone, cls);
+  setHud(s.drone, cls, `THR ${s.throttle}`);
+  $("v-mode").textContent = s.mode;
+  $("v-thr").textContent = s.throttle;
+  $("note").textContent = s.note;
+  if (!synced) {
+    $("hover").value = s.hover; $("v-hover").textContent = s.hover;
+    $("tilt").value = s.tilt; $("v-tilt").textContent = s.tilt;
+    synced = true;
+  }
+}
+
+// Heartbeat + current intent, 20x/sec. If this stops, the drone descends.
+setInterval(() => send({ type: "intent", ...intent }), 50);
+
+// Hold-to-move buttons
+const axisButtons = document.querySelectorAll("[data-axis]");
+function buttonFor(axis, val) {
+  return document.querySelector(`[data-axis="${axis}"][data-val="${val}"]`);
+}
+function press(axis, val) {
+  intent[axis] = val;
+  axisButtons.forEach((b) => { if (b.dataset.axis === axis) b.classList.toggle("on", +b.dataset.val === val); });
+}
+function release(axis, val) {
+  if (intent[axis] === val) intent[axis] = 0;
+  const b = buttonFor(axis, val);
+  if (b) b.classList.remove("on");
+}
+function releaseAll() {
+  for (const k in intent) intent[k] = 0;
+  axisButtons.forEach((b) => b.classList.remove("on"));
+}
+
+axisButtons.forEach((b) => {
+  const axis = b.dataset.axis, val = +b.dataset.val;
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    b.setPointerCapture(e.pointerId);
+    press(axis, val);
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach((ev) =>
+    b.addEventListener(ev, () => release(axis, val)));
+  b.addEventListener("contextmenu", (e) => e.preventDefault());
+});
+
+// One-shot commands
+document.querySelectorAll("[data-cmd]").forEach((b) =>
+  b.addEventListener("click", () => send({ type: "cmd", cmd: b.dataset.cmd })));
+
+// Sliders
+["hover", "tilt"].forEach((id) => {
+  $(id).addEventListener("input", () => {
+    $("v-" + id).textContent = $(id).value;
+    send({ type: "settings", [id]: +$(id).value });
+  });
+});
+
+// Keyboard
+const keyMap = {
+  ArrowUp: ["pitch", 1], ArrowDown: ["pitch", -1], ArrowLeft: ["roll", -1], ArrowRight: ["roll", 1],
+  KeyW: ["climb", 1], KeyS: ["climb", -1], KeyA: ["yaw", -1], KeyD: ["yaw", 1],
+};
+const cmdKeys = { KeyT: "takeoff", KeyL: "land", KeyR: "reset", Space: "kill" };
+
+window.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT") return;
+  if (cmdKeys[e.code]) {
+    e.preventDefault();
+    if (!e.repeat) send({ type: "cmd", cmd: cmdKeys[e.code] });
+    return;
+  }
+  const m = keyMap[e.code];
+  if (m) { e.preventDefault(); if (!e.repeat) press(m[0], m[1]); }
+});
+window.addEventListener("keyup", (e) => {
+  const m = keyMap[e.code];
+  if (m) release(m[0], m[1]);
+});
+
+// Losing focus or hiding the tab: stop moving.
+// Note: clicking into the video iframe steals focus, which also releases keys. That's intended.
+window.addEventListener("blur", releaseAll);
+document.addEventListener("visibilitychange", () => { if (document.hidden) releaseAll(); });
+
+connect();
+</script>
+</body>
+</html>

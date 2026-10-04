@@ -14,7 +14,6 @@
             <!-- src comes from /api/config (VIDEO_URL on the server) -->
             <iframe id="camera" class="camera-frame" allow="autoplay">
             </iframe>
-            <p id="ping">Pi ping: checking...</p>
         </div>
         <section class="controls" aria-label="Movement controls">
             <h2>Movement</h2>
@@ -99,20 +98,6 @@
                 sendControl(command);
             }
         });
-
-        async function updatePing() {
-            const started = performance.now();
-            const ping = document.getElementById("ping");
-            try {
-                await fetch(`/api/ping?t=${Date.now()}`, { cache: "no-store" });
-                ping.textContent = `Pi ping: ${Math.round(performance.now() - started)} ms`;
-            } catch {
-                ping.textContent = "Pi ping: unavailable";
-            }
-        }
-
-        updatePing();
-        setInterval(updatePing, 2000);
 
         async function loadPingTimes() {
             const times = await (await fetch("/api/stats")).json();

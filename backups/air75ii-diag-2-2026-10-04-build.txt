@@ -1,0 +1,38 @@
+Radio-robustness firmware, 2026-10-04 (INSTALLED via HTTP OTA)
+Image: air75ii-diag-2-2026-10-04.bin
+Size: 321936 bytes
+SHA-256: A6F3330475A8DC12AA45A7CA3EA14DADB10C75FBC0EE53E695B9623D8FFE751C
+Runtime identity: air75-diag-2
+
+Changes from air75-diag-1 (radio setup only; control/failsafe logic unchanged):
+- AP channel 6 -> 1
+- 802.11b PHY, advertised and ESP transmit rates limited to 1-2 Mbps
+- Output power 20.5 dBm
+
+Reason: fault logs 2026-10-04 00:06-01:35 showed 150-400 ms packet gaps
+almost exclusively while ARMED (motors spinning); ESP loop, heap and boot ID
+healthy throughout.
+
+Installation:
+- Pre-check: air75-diag-1, state WAITING, adapter on channel 6, no client running.
+- Upload: authenticated HTTP OTA, HTTP 200 Update Success! Rebooting...
+- Adapter reconnected automatically: channel 1, 802.11b, 2 Mbps TX/RX.
+- Runtime identity air75-diag-2, boot ID 886320946, reset reason 4, heap 44552.
+- 10 s disarmed link test: DISARMED, link_ok=True, 510 accepted, 0 invalid,
+  0 rejected, max packet gap 62 ms.
+- No arm command sent. Armed/motor test still required.
+
+REVERTED 2026-10-04 ~02:05 to air75-diag-1 (SHA-256 5BAFA794...8020) via OTA.
+Result of diag-2 armed test (logs 01:57:59, 01:58:13): link lost after exactly
+10 armed packets (~0.2 s) both times, vs 2-9 s on diag-1. Disarmed link clean,
+signal -59 dBm, no ESP reboot. Conclusion: 1-2 Mbps DSSS frames are long on
+air and are hit by impulsive motor/ESC noise; low PHY rates are worse here.
+OTA client timed out on the HTTP response, but the receiver rebooted into
+air75-diag-1 (boot ID 85953512) on channel 6.
+
+Follow-up: diag-1 came back up as 802.11b 11 Mbps because the SDK stores the
+PHY mode in flash. Installed air75-diag-3 = diag-1 + explicit
+WiFi.setPhyMode(WIFI_PHY_MODE_11N).
+Image: air75ii-diag-3-2026-10-04.bin, 321840 bytes,
+SHA-256 66153A5AD22781538A88530EC527182AE7B1D04986FB9E1B7947BCBD606E3E8C.
+OTA HTTP 200 Update Success; adapter reconnected channel 6, 802.11g.

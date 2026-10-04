@@ -1,0 +1,6 @@
+2026-10-04 02:22:20 COM4 features 0x10440008 -> 0x10444000 (msp)
+2026-10-04 02:47:31 COM4 AIRMODE ON -> OFF, angle_p_gain 50 -> 35
+2026-10-04 04:36:15 COM4 was: AIRMODE OFF, angle_p_gain 35, rc_smoothing_setpoint_cutoff 0, rc_smoothing_throttle_cutoff 0; ran: set rc_smoothing_setpoint_cutoff = 25; set rc_smoothing_throttle_cutoff = 25
+2026-10-04 04:44:04 COM4 debug_mode -> RC_SMOOTHING, rc_smoothing_debug_axis ROLL -> THROTTLE (diagnostics only)
+2026-10-04 05:00:12 COM4 was: AIRMODE OFF, angle_p_gain 35, rc_smoothing_setpoint_cutoff 25, rc_smoothing_throttle_cutoff 25; ran: feature AIRMODE
+2026-10-04 05:07:58 COM4 was: AIRMODE ON, angle_p_gain 35, rc_smoothing_setpoint_cutoff 25, rc_smoothing_throttle_cutoff 25, i_pitch 59, i_roll 60, iterm_windup 80; ran: set angle_p_gain = 55; set i_pitch = 35; set i_roll = 35; set iterm_windup = 50

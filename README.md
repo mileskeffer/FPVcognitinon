@@ -1,34 +1,83 @@
 # FPVcognitinon
-hackathon project for HD:CR 2026 decicated to processing FPV drone camera data and utilizing facial recognition software with it
 
-## Stream from another device
+Hackathon project for displaying an FPV camera stream and collecting Pi telemetry.
 
-1. On the computer running the server, install dependencies and start it:
+## Run the dashboard
 
-	```bash
-	npm install
-	npm start
-	```
+Install dependencies and start the Express server:
 
-2. For a phone or another computer to share its camera, serve the app over HTTPS. Browsers block camera access on a normal LAN HTTP address. Set the certificate paths before starting:
+```bash
+npm install
+node server.js
+```
 
-	```bash
-	HTTPS_KEY=/path/to/key.pem HTTPS_CERT=/path/to/cert.pem npm start
-	```
+Find the server computer's LAN address on Linux with:
 
-3. Find the server computer's local IP address. On Linux, use `hostname -I`.
+```bash
+hostname -I
+```
 
-4. Open the sender page on the camera device and the viewer page on the viewing device, using the same room name:
+The dashboard embeds the camera page at `http://192.168.0.196:8889/cam`. That camera service must already be running and reachable from the viewing device.
 
-	```text
-	https://SERVER_IP:3000/sender.html?room=drone1
-	https://SERVER_IP:3000/viewer.html?room=drone1
-	```
+## Feeder ping monitor
 
-The sender device captures its camera with WebRTC. The viewer receives the video peer-to-peer. The server only exchanges WebRTC setup messages. Both devices must be able to reach the server, and a TURN server may be required when they are on different networks.
+The feeder in `feeder/status.py` repeatedly pings the configured devices, calculates the average response time, and submits the results to the Express server. The dashboard reads those results from `GET /api/stats` and places each device in the ping table on `index.html`.
 
-## Face recognition
+Install the Python dependency if needed:
 
-The laptop can name the people in the drone's video. `face_id/stream.py` reads the Pi's feed from MediaMTX, finds faces with a YOLO11n face detector, matches them against photos in `face_id/known_faces/`, publishes an annotated stream to the MediaMTX path `faces`, and sends the names to this site's **Recognized** panel.
+```bash
+python3 -m pip install requests
+```
 
-Setup for the laptop and the Pi 4: [face_id/SETUP.md](face_id/SETUP.md).
+Run the feeder from the project directory:
+
+```bash
+python3 feeder/status.py
+```
+
+By default it pings:
+
+```text
+192.168.0.192 -> pi-zero
+192.168.0.196 -> my-laptop
+```
+
+Configure different targets and display names with comma-separated options:
+
+```bash
+python3 feeder/status.py \
+	--targets 192.168.0.192,192.168.0.196 \
+	--names pi-zero,my-laptop
+```
+
+The number of names should match the number of target addresses. The feeder currently posts to `http://localhost:3000/api/stats`, so run it on the same machine as the Express server unless `status.py` is updated to support a remote server URL.
+
+The server stores the latest submitted list in memory. Restarting the server clears the table data until the feeder submits the next batch.
+
+## Dashboard features
+
+- Displays the embedded camera stream.
+- Measures and displays the browser-to-Express-server ping every two seconds.
+- Displays average ping values returned by `GET /api/stats`.
+- Provides forward, back, left, right, rotate-left, and rotate-right controls.
+- Arrow keys control movement; `Q` rotates left and `E` rotates right.
+
+The movement buttons currently send commands to `POST /api/control` and log them in the server terminal. They do not control motors until `/api/control` is connected to the Pi's motor or flight-controller API.
+
+## API
+
+`POST /api/control`
+
+```json
+{ "command": "forward" }
+```
+
+Valid commands are `forward`, `back`, `left`, `right`, `rotate-left`, and `rotate-right`.
+
+`POST /api/stats`
+
+```json
+{ "ping_times": [{ "name": "my laptop", "time": 0.5 }] }
+```
+
+`GET /api/stats` returns the latest submitted ping values.

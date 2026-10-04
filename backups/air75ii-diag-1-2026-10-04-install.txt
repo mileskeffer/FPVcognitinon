@@ -1,0 +1,20 @@
+Diagnostic firmware installation, 2026-10-04
+Image: air75ii-diag-1-2026-10-04.bin
+Size: 321824 bytes
+SHA-256: 5BAFA794D2CF7F2CADAC36929F94D3DD27CBBBE0FA8F6EDC3AC3AD7E40188020
+Upload: authenticated HTTP OTA, HTTP 200 Update Success! Rebooting...
+Runtime identity: air75-diag-1
+First observed boot ID: 2496540496
+First observed reset reason code: 4
+
+Validation:
+- Pinned ESP8285 PlatformIO build succeeded.
+- 17 existing PC regression tests and 3 diagnostic protocol tests passed.
+- Five-second disarmed control test: DISARMED, link_ok=True, ACK 249.
+- Explicit KILL while disarmed captured cause 2 and throttle 1000.
+- Subsequent KILL preserved the original fault snapshot and boot ID.
+- No arm command sent. No motor-load test performed by the assistant.
+
+Next user reproduction: restart the updated gamepad client with props removed.
+Receiver timing and before/after boot information are included automatically
+in the next logs/gamepad-fault-*.json. Do not power-cycle before retrieval.
