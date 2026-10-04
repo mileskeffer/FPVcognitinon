@@ -73,10 +73,11 @@ def main():
     names = args.names.split(',')
     print(f" |___ Names: {names}")
 
-    ping_times = get_ping_times(targets, names)
-    print(f"[*] Ping-Times: {ping_times}")
+    while True:
+        ping_times = get_ping_times(targets, names)
+        print(f"[*] Ping-Times: {ping_times}")
 
-    send_stats(ping_times, names)
+        send_stats(ping_times, names)
 
 if __name__ == "__main__":
     main()

@@ -27,7 +27,18 @@
             </div>
             <p id="control-status">Ready</p>
         </section>
+
     </div>
+
+    <div>
+        <section class="ping-stats">
+            <table>
+                <thead><tr><th>Name</th><th>Avg (ms)</th></tr></thead>
+                <tbody id="times"></tbody>
+            </table>
+        </section>
+    </div>
+    
     <script>
         const controlStatus = document.getElementById("control-status");
 
@@ -81,6 +92,16 @@
 
         updatePing();
         setInterval(updatePing, 2000);
+
+        async function loadPingTimes() {
+            const times = await (await fetch("/api/stats")).json();
+            document.getElementById("times").innerHTML = times
+            .map(t => `<tr><td>${t.name}</td><td>${t.time}</td></tr>`)
+            .join("");
+        }
+
+        loadPingTimes();
+        setInterval(loadPingTimes, 100); // refreshes n milliseconds
     </script>
 </body>
 

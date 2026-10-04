@@ -14,6 +14,10 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(import.meta.dirname, "index.html"));
 });
 
+app.get("/api/stats", (req, res) => {
+    res.json(avg_times);
+});
+
 app.post("/api/stats", (req, res) => {  
   // [ { "name": "my laptop", "time": 0.05 } ]
   const { ping_times } = req.body;
