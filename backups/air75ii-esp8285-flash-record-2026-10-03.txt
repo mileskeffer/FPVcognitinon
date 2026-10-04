@@ -1,0 +1,13 @@
+﻿Air75 II ESP8285 flash record
+================================
+Date: 2026-10-03 19:35:31 -04:00
+Receiver target: UNIFIED_ESP8285_2400_RX
+Chip: ESP8285H16
+MAC: 34:AB:95:B0:A9:BC
+Write address: 0x00000000
+Custom image: air75ii-wifi-bridge-2026-10-03.bin
+Custom image size: 276368 bytes
+Custom SHA-256: 548C31CEA461EF954A3BE90FC3DA3F20459C1BF51996E4777D91CEB1F14B2357
+esptool result: Hash of data verified.
+Stock backup SHA-256: A8407EBDC41DE3FFEACFBD96A175D44CA961A609DA3095DA907BD02E61E364D9
+STM32 Betaflight firmware: unchanged

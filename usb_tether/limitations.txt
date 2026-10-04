@@ -1,0 +1,47 @@
+USB tether control: limitations
+===============================
+
+How it works: a USB cable from the PC plugs straight into the drone's flight
+controller, and the PC sends stick commands down the cable.
+
+1. The cable fights the drone (the main problem)
+   - The cable plugs into the back of the drone, so its weight and pull tip
+     the drone backwards. One motor has to work noticeably harder just to stay
+     level.
+   - When the cable goes tight, the flight controller keeps pushing harder
+     against it. When the pull suddenly lets go, that built-up push makes the
+     drone flip.
+   - A setting called airmode helps in one way and hurts in another: with it
+     off, the drone loses control when the throttle drops in the air; with it
+     on, it surges against the cable.
+   - Even a light USB-C cable is heavy for a 20 g drone. Three thin wires
+     soldered to the board's spare serial pads would be much lighter.
+   - The USB connection dropped mid-flight several times, which cuts control.
+
+2. The drone cannot tell where it is
+   - It only has a gyro and an accelerometer. It knows which way is level,
+     but not its position or height, so it always drifts and needs constant
+     correction. Drones that hover in place on their own use a downward camera
+     and a height sensor, which this one does not have.
+   - In flight, motor vibration swamps the accelerometer, so the software
+     cannot work out how fast the drone is rising or falling.
+   - The flight-assist mode can only guess speed from how far the drone is
+     tilted. It cannot feel the cable or air pushing it.
+
+3. Small rooms are rough air
+   - The drone's own downdraft bounces off the floor and walls and shoves it
+     around, causing sudden darts.
+
+4. Setup problems found along the way (now fixed)
+   - The flight controller was smoothing the controls so heavily that throttle
+     changes took seconds to arrive; the drone seemed too weak to lift.
+   - Its sense of "level" was about 6 degrees off, so it tipped over instead of
+     climbing until it was recalibrated.
+
+5. Hard to control height
+   - The drone hovers at a fairly low throttle, inside a narrow band on a short
+     gamepad trigger, so tiny finger movements make big height changes.
+
+6. Limited flight records
+   - The drone's onboard flight log memory is full, so the only records are
+     the lower-detail logs the PC saves.

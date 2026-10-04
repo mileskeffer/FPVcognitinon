@@ -1,0 +1,24 @@
+Air75 II receiver recovery result
+================================
+
+Receiver: ESP8285H16, MAC 34:AB:95:B0:A9:BC
+Flight controller USB serial: 303E396F3435, COM4
+DFU exit: dfu-util command-only -s 0x08000000:leave (no -D)
+UART: UART3, USB-controlled baud (serialpassthrough UART3 0 rxtx)
+ROM probe: 115200 failed with header 0x92; 420000 identified the correct chip.
+Flash connection: 420000, --before no_reset_no_sync after successful ROM probe
+Image: firmware/air75_wifi_bridge/.pio/build/air75_esp8285/firmware.bin
+Image bytes: 319744
+SHA-256: CA6AF86869C9400249F90F2737BB44BCAA08276D64EED53732DCF6161A6E9435
+esptool: 4.8.1, Hash of data verified, soft reset completed
+esptool crystal estimate warning: 27.30 MHz, normalized to 26 MHz
+STM32 flash: not written
+
+Post-update verification:
+- Air75-Control connected using the saved TP-Link adapter profile.
+- Disarmed UDP test: state=DISARMED, link_ok=True, last_ack_sequence=148.
+- HTTP /update: 401 with Basic authentication challenge before and after test.
+- No arm command sent.
+
+Still required: normal power cycle to exit Betaflight UART passthrough, then
+props-off Betaflight channel and RXLOSS checks. No flight/range test performed.

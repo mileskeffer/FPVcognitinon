@@ -1,0 +1,46 @@
+# MediaMTX config for the drone control Pi.
+# Pulls the camera's RTSP stream and re-serves it as WebRTC so browsers can play it.
+#
+#   ./mediamtx mediamtx.yml
+#
+# Browser player:  http://<pi-ip>:8889/cam/      (the control page embeds this)
+# Raw RTSP:        rtsp://<pi-ip>:8554/cam       (VLC, ffplay, OpenCV, etc.)
+
+logLevel: info
+
+rtsp: true
+rtspAddress: :8554
+rtmp: false
+hls: false
+srt: false
+moq: false
+
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+# If the video pane stays black but the page loads, add the Pi's IP as the
+# browser sees it (e.g. the hotspot address) here:
+webrtcAdditionalHosts: []
+
+paths:
+  cam:
+    # ---- Option A: pull an existing RTSP stream (default) ----
+    # Set this to your camera's URL. Must be H.264 for browser playback.
+    source: rtsp://CAMERA_IP:554/stream
+    # tcp = no smeared frames on lossy Wi-Fi, a bit more lag when packets drop.
+    # udp = lowest latency, artifacts on loss. automatic tries udp then tcp.
+    rtspTransport: automatic
+    sourceOnDemand: false
+
+    # ---- Option B: USB capture device instead (e.g. a 5.8 GHz UVC FPV receiver) ----
+    # Comment out the three lines above and uncomment below. Check the device with
+    #   v4l2-ctl --list-devices   and   v4l2-ctl -d /dev/video0 --list-formats-ext
+    # Pi 4: swap "-c:v libx264 -preset ultrafast -tune zerolatency" for "-c:v h264_v4l2m2m -b:v 1500k"
+    # Pi 5 has no hardware H.264 encoder, so libx264 at 640x480 is the move.
+    #
+    # source: publisher
+    # runOnInit: >
+    #   ffmpeg -f v4l2 -input_format mjpeg -video_size 640x480 -framerate 30 -i /dev/video0
+    #   -pix_fmt yuv420p -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -g 30 -b:v 1500k
+    #   -f rtsp rtsp://localhost:8554/cam
+    # runOnInitRestart: true

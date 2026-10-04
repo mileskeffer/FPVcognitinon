@@ -1,0 +1,470 @@
+Air75 II ESP8285 flashing and test instructions
+================================================
+
+Purpose
+-------
+
+These instructions install the custom Air75 II Wi-Fi-to-CRSF firmware on the
+onboard ESP8285 receiver processor. The TP-Link TL-WN725N then connects the PC
+to the ESP8285 access point and sends gamepad controls.
+
+This image is NOT Betaflight firmware. Never upload it through Betaflight's
+Firmware Flasher and never write it to the STM32G473 flight controller.
+
+The custom firmware has compiled successfully with the pinned PlatformIO
+ESP8285 toolchain and has passed props-off bring-up on the tested Air75 II:
+
+- Air75-Control appeared on 2.4 GHz channel 6.
+- The TL-WN725N received 192.168.4.2 from the ESP8285.
+- The ESP acknowledged disarmed UDP packets.
+- Betaflight received the expected neutral CRSF channels on UART3.
+- Betaflight asserted RXLOSS after UDP packet output stopped.
+
+This is not a completed flight or range test. Repeat the props-off checks for
+each board and after every firmware or configuration change.
+
+
+Stop conditions
+---------------
+
+Do not flash until all of these are true:
+
+[ ] Propellers are removed.
+[ ] backupinstructions.txt has been completed.
+[ ] Two full ESP8285 flash reads have matching SHA-256 hashes, or a verified
+    stock ExpressLRS recovery procedure is ready.
+[ ] The board is confirmed to use an ESP8285 serial ELRS receiver.
+[ ] The current ExpressLRS target has been recorded.
+[ ] The RX-BOOT pad has been physically located.
+[ ] The correct BETAFPV Air75 II .hex and CLI files have been downloaded.
+[ ] The PC will remain powered and the drone USB cable will not be disturbed
+    during the update.
+
+If any item is uncertain, stop before uploading.
+
+
+Part 1: Build the custom ESP8285 image
+--------------------------------------
+
+1. Install VS Code and the PlatformIO extension, or install PlatformIO Core.
+
+2. Create the local credentials file in PowerShell:
+
+   Copy-Item firmware/air75_wifi_bridge/include/wifi_credentials.example.h firmware/air75_wifi_bridge/include/wifi_credentials.h
+
+3. Open this local file:
+
+   firmware/air75_wifi_bridge/include/wifi_credentials.h
+
+   Set AIR75_WIFI_PASSWORD to a private password of at least eight characters.
+   This file is ignored by Git. Keep it available because the PC needs the same
+   password to join the Air75-Control network.
+
+4. Open a terminal in the repository and build:
+
+   cd firmware/air75_wifi_bridge
+   pio run
+
+5. The build must finish with SUCCESS. Do not continue after warnings about
+   program size, linker layout, missing libraries, or the wrong board.
+
+6. The file to upload is:
+
+   firmware/air75_wifi_bridge/.pio/build/air75_esp8285/firmware.bin
+
+7. Preserve the complete build output. It should identify:
+
+   - Environment: air75_esp8285
+   - Board: Generic ESP8285
+   - CPU: 80 MHz
+   - Flash: 1 MB
+   - Flash mode: DOUT
+   - Linker script: eagle.flash.1m64.ld
+
+8. Optionally calculate and record the custom image hash:
+
+   Get-FileHash .\firmware\air75_wifi_bridge\.pio\build\air75_esp8285\firmware.bin -Algorithm SHA256
+
+
+Part 2: Verify stock receiver information
+-----------------------------------------
+
+1. Keep the propellers removed.
+
+2. Turn off the normal ELRS radio transmitter so the receiver does not bind.
+
+3. Power the Air75 II from USB. If the receiver is not powered by USB on this
+   revision, follow the BETAFPV power instructions. Avoid leaving a powered VTX
+   without airflow.
+
+4. Wait approximately 60 seconds for the stock receiver to enter Wi-Fi mode.
+   Its indicator normally changes to a rapid blink.
+
+5. Join the receiver's network:
+
+   SSID: ExpressLRS RX
+   Password: expresslrs
+
+6. Open:
+
+   http://10.0.0.1
+
+7. On the Information/Hardware page, verify and screenshot:
+
+   - Platform is ESP8285/ESP8266
+   - Receiver is UART/serial based, not an SPI receiver
+   - Target is the BETAFPV 2.4 GHz AIO receiver target
+   - Installed ExpressLRS version
+   - Hardware layout and serial pins, if shown
+
+8. If the target or processor differs, stop. The current custom build is not
+   approved for another processor or pin layout.
+
+
+Part 3: First installation through the ELRS Wi-Fi updater
+---------------------------------------------------------
+
+This is the preferred first-install method because the working stock ELRS
+firmware already knows how to update its own ESP8285 application image.
+
+1. Leave the Air75 II powered and connected to ExpressLRS RX.
+
+2. In the ELRS Web UI, open the Update/Firmware Update page.
+
+3. Select only this file:
+
+   firmware/air75_wifi_bridge/.pio/build/air75_esp8285/firmware.bin
+
+   Do not select a BETAFPV .hex, an STM32 Betaflight image, a source file, or
+   platformio.ini.
+
+4. Begin the update.
+
+5. The updater may report a target mismatch because the custom image is not an
+   ExpressLRS build. Use Flash Anyway/Force only if all stop-condition items at
+   the beginning of this document have been completed.
+
+6. Stop immediately if the updater reports:
+
+   - Not enough space
+   - Wrong firmware format
+   - Write failure
+   - Unexpected target or processor
+
+   Do not try the same image in Betaflight Firmware Flasher.
+
+7. Once writing starts, do not remove USB or battery power and do not close the
+   browser. Wait for the updater to report completion.
+
+8. Continue waiting for at least 60 seconds after completion. The ExpressLRS
+   network should disappear and this custom network should appear:
+
+   SSID: Air75-Control
+   Password: the AIR75_WIFI_PASSWORD compiled in Part 1
+
+9. Only after Air75-Control appears should the board be power-cycled once.
+
+10. Reconnect the TL-WN725N to Air75-Control. The PC should receive an address
+    in 192.168.4.0/24; the ESP is 192.168.4.1.
+
+
+Part 3B: Installation through the proven USB passthrough path
+-------------------------------------------------------------
+
+On the tested Air75 II board, COM4 reaches the ESP8285 through Betaflight UART3
+passthrough. Use this method only after the two full backups from
+backupinstructions.txt have matching SHA-256 hashes.
+
+1. Keep the propellers removed and power-cycle the board so COM4 is in normal
+   Betaflight mode.
+
+2. Preserve the exact built image and calculate its SHA-256. Supply both to the
+   guarded flashing helper:
+
+   .\.venv\Scripts\python tools\flash_esp8285.py --port COM4 --uart UART3 --image backups\air75ii-wifi-bridge-2026-10-03.bin --sha256 IMAGE_SHA256
+
+3. The helper refuses an image with the wrong hash, size, or ESP executable
+   header. It also verifies that the receiver reports
+   UNIFIED_ESP8285_2400_RX before invoking esptool write_flash.
+
+After replacing ExpressLRS with the custom bridge, the ELRS software reboot
+command is no longer available. For later bridge updates, use the board's
+hardware recovery sequence:
+
+1. Disconnect USB and the flight battery.
+2. Hold the underside button labeled FC&RX-BOOT.
+3. Connect USB while holding the button, then release it. Both processors enter
+   their boot modes and Windows should show the STM32 DFU device.
+4. Make the STM32 leave DFU without disconnecting power. Wait for its COM port
+   to return. The ESP remains in ROM download mode.
+
+   With the installed dfu-util on Windows, use command-only leave mode:
+
+   & "$env:USERPROFILE\.platformio\packages\tool-dfuutil\bin\dfu-util.exe" -d 0483:df11 -a 0 -s 0x08000000:leave
+
+   Do not add -D or supply an empty file. dfu-util 0.11 rejects an empty file
+   at the flash start address. The ordinary -e detach command did not restore
+   COM4 on the tested board. A get_status error during leave can accompany USB
+   disconnection; verify that the same board returns as a COM port before
+   proceeding. COM-port recovery alone does not prove the ESP is in ROM mode.
+5. Probe the receiver before writing. This enables USB-controlled UART3 baud
+   rates and checks the ROM chip signature and MAC without writing flash:
+
+   python tools\probe_esp8285.py --port COM4
+
+   On the tested receiver, 115200 returned invalid packet header 0x92, but
+   420000 identified ESP8285H16, MAC 34:AB:95:B0:A9:BC. If no rate succeeds,
+   stop; do not interpret a working COM port as a working receiver bootloader.
+
+6. After a successful probe, keep power connected and preserve that connection.
+   Verify the exact image SHA-256 against your build record, then flash at the
+   successful probe rate (420000 in the recorded recovery):
+
+   python -m esptool --chip esp8266 --port COM4 --baud 420000 --before no_reset_no_sync --after soft_reset write_flash --flash_mode dout --flash_freq 40m --flash_size 1MB 0x0 firmware\air75_wifi_bridge\.pio\build\air75_esp8285\firmware.bin
+
+   no_reset_no_sync is appropriate ONLY immediately after the successful ROM
+   probe on the same powered receiver. It prevents esptool from restarting
+   synchronization at its default 115200 baud. Do not rerun flash_esp8285.py
+   here: the flight controller is already in passthrough, not its CLI.
+   Wait for "Hash of data verified". Then power-cycle normally to exit FC
+   passthrough before checking Betaflight channels.
+
+Do not power-cycle between steps 3 and 6. If the STM32 COM port does not return,
+stop and restore normal USB operation before retrying.
+
+Firmware builds containing the maintenance updater can be updated over Wi-Fi
+after this recovery flash. Stop every controller client, then wait at least one
+second for the bridge to return to WAITING. Controller shutdown sends a normal
+disarm burst so it does not leave the maintenance updater locked behind the
+FAILSAFE_LATCHED state. Connect to Air75-Control and open:
+
+   http://192.168.4.1/update
+
+Use username `air75` and the same private password as the Air75-Control network.
+Upload only a checksummed `firmware.bin` built for this ESP8285 project. The HTTP
+updater is not serviced while a control session is DISARMED or ARMED.
+
+4. Wait for esptool to report that the data hash was verified. Do not remove
+   power during erase, write, or verification.
+
+5. Power-cycle the board after the helper completes. Air75-Control should then
+   appear using the private password in:
+
+   firmware/air75_wifi_bridge/include/wifi_credentials.h
+
+6. Continue with the props-off tests in Part 4.
+
+
+Part 4: Install and test the PC protocol code
+---------------------------------------------
+
+Python 3.10 or newer is required.
+
+From the repository root on Windows:
+
+   py -m venv .venv
+   .\.venv\Scripts\python -m pip install --upgrade pip
+   .\.venv\Scripts\python -m pip install -r requirements.txt
+   .\.venv\Scripts\python -m unittest discover -s tests -v
+
+The protocol tests must pass before the gamepad program is used.
+
+List connected gamepads:
+
+   .\.venv\Scripts\python gamepad_control.py --list
+
+Start the gamepad client:
+
+   .\.venv\Scripts\python gamepad_control.py
+
+If Windows routes 192.168.4.x through another adapter, find the TL-WN725N IPv4
+address with ipconfig and bind explicitly, for example:
+
+   .\.venv\Scripts\python gamepad_control.py --bind-ip 192.168.4.2
+
+Expected initial application state:
+
+   DISARMED
+
+Do not attempt to arm if the program shows NO LINK, WAITING, or
+FAILSAFE_LATCHED.
+
+On kill, application shutdown, or an armed packet timeout, the bridge first
+sends centered sticks, minimum throttle, and ARM low. It repeats that disarmed
+state for 500 ms, then stops CRSF so Betaflight also detects RX loss. The
+gamepad window remains open with a red latched-failsafe message after a link
+failure; close and restart it to begin a new disarmed session.
+
+
+Part 5: Betaflight receiver test with props removed
+---------------------------------------------------
+
+1. Keep the propellers removed throughout this section.
+
+2. Connect Betaflight Configurator to the STM32 flight controller.
+
+3. Verify Ports:
+
+   - Serial RX enabled on the onboard receiver UART, normally UART3
+   - Serial RX disabled on other UARTs unless another receiver is intentionally
+     installed
+
+4. Verify Receiver settings:
+
+   - Receiver mode: Serial (via UART)
+   - Provider: CRSF
+   - Channel map: AETR1234
+
+5. Verify Modes:
+
+   - ARM assigned to AUX1, active near 2000
+   - ANGLE assigned to AUX2, active near 2000
+
+6. Open the Receiver tab and run gamepad_control.py.
+
+7. Expected disarmed values:
+
+   Roll:     approximately 1500
+   Pitch:    approximately 1500
+   Throttle: approximately 1000
+   Yaw:      approximately 1500
+   AUX1:     approximately 1000
+   AUX2:     approximately 2000
+
+8. Move each control separately and verify direction:
+
+   - Left stick right increases roll.
+   - Left stick forward moves pitch in the direction expected by Betaflight.
+   - Right stick right increases yaw.
+   - Right trigger raises throttle above the configured neutral setpoint.
+   - Left trigger lowers throttle toward 1000.
+
+9. If an axis is wrong, stop and correct either the gamepad axis arguments or
+   Betaflight channel mapping. Do not compensate during flight.
+
+10. Close gamepad_control.py. Within the configured Betaflight failsafe timing,
+    Betaflight must report RX loss. The ESP intentionally stops CRSF when UDP
+    control packets stop.
+
+11. Restart gamepad_control.py. It must return through DISARMED and must not
+    restore an earlier arm request.
+
+12. Disconnect the TL-WN725N or disconnect it from Air75-Control. Verify RX
+    loss again.
+
+13. Configure and test Betaflight flight-controller failsafe. For an indoor
+    whoop, Drop is the predictable starting procedure. A fixed-throttle Land
+    procedure does not provide altitude or position hold.
+
+
+Part 6: Props-off arming and motor test
+--------------------------------------
+
+Do this only after every check in Part 5 passes.
+
+1. Remove all four propellers again and visually confirm they are removed.
+
+2. Place the aircraft securely on a nonconductive surface.
+
+3. Close Betaflight Configurator. Betaflight normally blocks arming while an
+   active MSP/configurator connection exists.
+
+4. Start gamepad_control.py and wait for DISARMED.
+
+5. Center both sticks, release both triggers, and hold Start for three seconds.
+
+6. The program should report ARMED. Motors may spin at idle because of
+   Betaflight motor-stop/airmode settings.
+
+7. Use only a very small throttle increase. Confirm all motors respond.
+
+8. Press B to disarm. Confirm every motor stops.
+
+9. Repeat with the TL-WN725N disconnected while armed at idle. AUX1 must go low
+   and throttle must go to 1000 before Betaflight reports RX loss. All motors
+   must stop.
+
+10. Reconnect. The system must require a disarmed session before it can arm
+    again.
+
+Do not install propellers until these tests pass repeatedly.
+
+
+Part 7: First propeller-on test
+------------------------------
+
+1. Use a fully charged battery and install the correct propellers in the
+   correct orientation.
+
+2. Use an enclosed test area with no people nearby and no fragile objects.
+
+3. Keep the aircraft within arm's reach and no more than a few centimetres off
+   the floor for the first hover.
+
+4. Do not rely on video for the first test.
+
+5. Test at progressively greater distances only after measuring packet loss
+   and failsafe behavior. The onboard ESP Wi-Fi antenna was intended for
+   maintenance; this project has not established a safe flight range.
+
+
+Recovery if Air75-Control does not appear
+-----------------------------------------
+
+1. Keep the propellers removed.
+
+2. Wait at least two minutes before assuming the flash failed.
+
+3. Power-cycle once and wait another minute.
+
+4. If neither Air75-Control nor ExpressLRS RX appears, use the previously
+   prepared recovery path:
+
+   - Ground RX-BOOT while powering the ESP8285 to enter its ROM bootloader.
+   - Use the verified board pinout and a 3.3 V UART path.
+   - Restore the full 1 MB esptool backup, or flash the recorded
+     BETAFPV 2.4GHz AIO RX target with ExpressLRS Configurator.
+
+5. ExpressLRS Configurator supports BetaflightPassthrough recovery. With custom
+   firmware installed, the automatic reset request may not work; RX-BOOT may
+   need to be grounded during power-up.
+
+6. For manual Betaflight serial passthrough, confirm the actual receiver UART.
+   On this board it is expected to be UART3, whose older numeric identifier is
+   2. Current Betaflight syntax supports a command such as:
+
+   serialpassthrough UART3 0 rxtx
+
+   Older firmware may require:
+
+   serialpassthrough 2 0 rxtx
+
+   Do not enter either command until UART3 has been confirmed in the Ports tab.
+   Passthrough continues until the flight controller is power-cycled.
+
+7. Do not attach a 5 V UART signal to ESP8285 RX/TX logic. When using an
+   external USB-to-UART adapter, its logic level must be 3.3 V and grounds must
+   be shared. Follow the board-specific power instructions rather than powering
+   multiple rails from unrelated sources.
+
+
+Official references
+-------------------
+
+BETAFPV Air75 II OEM firmware and CLI files:
+https://support.betafpv.com/hc/en-us/articles/54653618858521-CLI-and-Firmware-for-Air75-II
+
+ExpressLRS receiver updating:
+https://www.expresslrs.org/quick-start/receivers/updating/
+
+ExpressLRS receiver recovery:
+https://www.expresslrs.org/quick-start/unbricking/
+
+Betaflight serial passthrough:
+https://betaflight.com/docs/wiki/guides/current/Serial
+
+Betaflight failsafe behavior:
+https://betaflight.com/docs/wiki/guides/current/Failsafe
+
+ESP8266 esptool commands:
+https://docs.espressif.com/projects/esptool/en/latest/esp8266/esptool/basic-commands.html
