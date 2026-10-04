@@ -88,6 +88,32 @@
   font-size: 0.9rem;
 }
 
+.sightings {
+  margin-top: 16px;
+  max-width: 480px;
+  padding: 16px;
+  border: 1px solid var(--crimson);
+  border-radius: 8px;
+  background: #211512;
+}
+
+.sightings h2,
+.sightings h3 {
+  margin: 0 0 8px;
+  color: var(--pumpkin);
+  font-size: 1.1rem;
+}
+
+.sightings h3 { margin-top: 12px; font-size: 0.95rem; }
+.sightings ul { margin: 0; padding-left: 20px; }
+.sightings li { margin: 2px 0; }
+.sightings .known { color: #8fd18f; font-weight: 600; }
+.sightings .unknown { color: var(--autumn-gold); }
+.sightings .track,
+.sightings .time { color: #b9a58c; font-size: 0.85rem; }
+
+#faces-status { margin: 0 0 8px; color: var(--autumn-gold); }
+
 @media (max-width: 800px) {
   .stream-layout { flex-direction: column; align-items: stretch; }
   .controls { order: 0; flex-basis: auto; width: 100%; box-sizing: border-box; }

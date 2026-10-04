@@ -11,7 +11,8 @@
 <body class="stream-page">
     <div class="stream-layout">
         <div class="video-panel">
-            <iframe class="camera-frame" src="http://192.168.0.196:8889/cam?controls=false&muted=true&autoplay=true&playsinline=true" allow="autoplay">
+            <!-- src comes from /api/config (VIDEO_URL on the server) -->
+            <iframe id="camera" class="camera-frame" allow="autoplay">
             </iframe>
             <p id="ping">Pi ping: checking...</p>
         </div>
@@ -37,9 +38,29 @@
                 <tbody id="times"></tbody>
             </table>
         </section>
+
+        <section class="sightings" aria-label="Face recognition">
+            <h2>Recognized</h2>
+            <p id="faces-status">Face service not connected</p>
+            <ul id="faces-present"></ul>
+            <h3>Recent</h3>
+            <ul id="faces-log"></ul>
+        </section>
     </div>
-    
+
     <script>
+        const PLAYER_OPTS = "controls=false&muted=true&autoplay=true&playsinline=true";
+
+        async function loadVideo() {
+            let url = "http://192.168.0.196:8889/cam";
+            try {
+                url = (await (await fetch("/api/config")).json()).video_url || url;
+            } catch {}
+            document.getElementById("camera").src = `${url}${url.includes("?") ? "&" : "?"}${PLAYER_OPTS}`;
+        }
+
+        loadVideo();
+
         const controlStatus = document.getElementById("control-status");
 
         async function sendControl(command) {
@@ -102,6 +123,41 @@
 
         loadPingTimes();
         setInterval(loadPingTimes, 100); // refreshes n milliseconds
+
+        const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+        async function loadSightings() {
+            const status = document.getElementById("faces-status");
+            let s;
+            try {
+                s = await (await fetch("/api/sightings", { cache: "no-store" })).json();
+            } catch {
+                status.textContent = "Dashboard server unreachable";
+                return;
+            }
+            if (s.age_ms === null) {
+                status.textContent = "Face service not connected";
+            } else if (s.age_ms > 5000) {
+                status.textContent = `Face service offline (last update ${Math.round(s.age_ms / 1000)}s ago)`;
+            } else if (!s.signal) {
+                status.textContent = "No video from drone";
+            } else {
+                status.textContent = `${s.present.length} face(s) in view`;
+            }
+            const live = s.age_ms !== null && s.age_ms <= 5000;
+            document.getElementById("faces-present").innerHTML = (live ? s.present : [])
+                .map(p => `<li class="${p.name === "Unknown" ? "unknown" : "known"}">${escapeHtml(p.name)}` +
+                          ` <span class="track">#${p.track}</span></li>`)
+                .join("");
+            document.getElementById("faces-log").innerHTML = s.log.slice(0, 10)
+                .map(e => `<li><span class="time">${new Date(e.time).toLocaleTimeString()}</span> ` +
+                          `${escapeHtml(e.name)} ${e.event}` +
+                          `${e.event === "left" ? ` after ${Math.round(e.duration_s)}s` : ""}</li>`)
+                .join("");
+        }
+
+        loadSightings();
+        setInterval(loadSightings, 500);
     </script>
 </body>
 

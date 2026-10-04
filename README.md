@@ -26,3 +26,9 @@ hackathon project for HD:CR 2026 decicated to processing FPV drone camera data a
 	```
 
 The sender device captures its camera with WebRTC. The viewer receives the video peer-to-peer. The server only exchanges WebRTC setup messages. Both devices must be able to reach the server, and a TURN server may be required when they are on different networks.
+
+## Face recognition
+
+The laptop can name the people in the drone's video. `face_id/stream.py` reads the Pi's feed from MediaMTX, finds faces with a YOLO11n face detector, matches them against photos in `face_id/known_faces/`, publishes an annotated stream to the MediaMTX path `faces`, and sends the names to this site's **Recognized** panel.
+
+Setup for the laptop and the Pi 4: [face_id/SETUP.md](face_id/SETUP.md).
