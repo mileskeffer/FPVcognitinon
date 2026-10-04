@@ -13,7 +13,6 @@
         <div class="video-panel">
             <iframe class="camera-frame" src="http://192.168.0.196:8889/cam?controls=false&muted=true&autoplay=true&playsinline=true" allow="autoplay">
             </iframe>
-            <p id="ping">Pi ping: checking...</p>
         </div>
         <section class="controls" aria-label="Movement controls">
             <h2>Movement</h2>
@@ -78,20 +77,6 @@
                 sendControl(command);
             }
         });
-
-        async function updatePing() {
-            const started = performance.now();
-            const ping = document.getElementById("ping");
-            try {
-                await fetch(`/api/ping?t=${Date.now()}`, { cache: "no-store" });
-                ping.textContent = `Pi ping: ${Math.round(performance.now() - started)} ms`;
-            } catch {
-                ping.textContent = "Pi ping: unavailable";
-            }
-        }
-
-        updatePing();
-        setInterval(updatePing, 2000);
 
         async function loadPingTimes() {
             const times = await (await fetch("/api/stats")).json();

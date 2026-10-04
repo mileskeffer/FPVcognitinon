@@ -1,74 +1,83 @@
 # FPVcognitinon
 
-Hackathon project for **HD:CR 2026**: process the camera feed from a small FPV
-drone and run facial recognition on it, with the drone controlled from a PC.
+Hackathon project for displaying an FPV camera stream and collecting Pi telemetry.
 
-The drone is a **BETAFPV Air75 II**, a 75 mm, 1S indoor "whoop" (about 20 g)
-running Betaflight. It normally flies from an ExpressLRS radio handset. This
-repository replaces that with control from a PC and a Logitech F310 gamepad,
-so software can drive the drone.
+## Run the dashboard
 
-## Two ways to control the drone
+Install dependencies and start the Express server:
 
-| | [Wi-Fi 2.4 GHz](wifi-2.4ghz/) | [USB tether](usb_tether/) |
-|---|---|---|
-| How | Custom firmware on the drone's ESP8285 chip turns it into a Wi-Fi access point; the PC sends controls over Wi-Fi | A USB cable plugs straight into the flight controller; the PC sends Betaflight MSP commands down it |
-| Range | A few metres, free flight | Cable length |
-| Status | **Blocked:** motor noise cuts the Wi-Fi link before the drone can lift off | **Flies**, but needs constant correction; the cable pulls on the drone |
-| Limitations | [wifi-2.4ghz/limitations.txt](wifi-2.4ghz/limitations.txt) | [usb_tether/limitations.txt](usb_tether/limitations.txt) |
+```bash
+npm install
+node server.js
+```
 
-Both are controlled from the same gamepad layout ([control-scheme.txt](control-scheme.txt)),
-and in both Betaflight does the actual stabilising.
+Find the server computer's LAN address on Linux with:
 
-### What neither approach can fix
+```bash
+hostname -I
+```
 
-The Air75 II has only a gyro and accelerometer. It knows which way is level,
-but not its position or height, so it drifts and cannot hover in place on its
-own. Drones that do (for example a DJI Tello) use a downward camera and a height
-sensor. In a small room the drone's own downdraft also bounces off the floor and
-walls and pushes it around.
+The dashboard embeds the camera page at `http://192.168.0.196:8889/cam`. That camera service must already be running and reachable from the viewing device.
 
-## TALK ABOUT FACIAL RECOG HERE
+## Feeder ping monitor
 
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+The feeder in `feeder/status.py` repeatedly pings the configured devices, calculates the average response time, and submits the results to the Express server. The dashboard reads those results from `GET /api/stats` and places each device in the ping table on `index.html`.
 
-## Repository layout
+Install the Python dependency if needed:
+
+```bash
+python3 -m pip install requests
+```
+
+Run the feeder from the project directory:
+
+```bash
+python3 feeder/status.py
+```
+
+By default it pings:
 
 ```text
-wifi-2.4ghz/        Wi-Fi control: PC apps, link, diagnostics, full setup guide
-usb_tether/         USB tether control: gamepad app, flight assist, Betaflight tools
-firmware/           ESP8285 Wi-Fi bridge firmware (PlatformIO)
-tools/              ESP8285 backup, flashing, OTA update and Betaflight test scripts
-tests/              Tests for the Wi-Fi link and tools
-backups/            Firmware images, flash backups, Betaflight config, install records
-control-scheme.txt  Gamepad layout
-backupinstructions.txt, flashinginstructions.txt   ESP8285 backup and flashing steps
-logs/               Flight and fault logs (not committed)
+192.168.0.192 -> pi-zero
+192.168.0.196 -> my-laptop
 ```
 
-## Getting started
+Configure different targets and display names with comma-separated options:
 
-Requirements: Windows, Python 3.10+, a Logitech F310 (switch on the back set to
-X), and the Air75 II. The Wi-Fi approach also needs a USB Wi-Fi adapter
-(a TP-Link TL-WN725N was used).
-
-```powershell
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r wifi-2.4ghz\requirements.txt
+```bash
+python3 feeder/status.py \
+	--targets 192.168.0.192,192.168.0.196 \
+	--names pi-zero,my-laptop
 ```
 
-Then follow the README of the approach you want. The USB tether is the one that
-currently flies:
+The number of names should match the number of target addresses. The feeder currently posts to `http://localhost:3000/api/stats`, so run it on the same machine as the Express server unless `status.py` is updated to support a remote server URL.
 
-```powershell
-.\.venv\Scripts\python.exe usb_tether\tether_control.py
+The server stores the latest submitted list in memory. Restarting the server clears the table data until the feeder submits the next batch.
+
+## Dashboard features
+
+- Displays the embedded camera stream.
+- Measures and displays the browser-to-Express-server ping every two seconds.
+- Displays average ping values returned by `GET /api/stats`.
+- Provides forward, back, left, right, rotate-left, and rotate-right controls.
+- Arrow keys control movement; `Q` rotates left and `E` rotates right.
+
+The movement buttons currently send commands to `POST /api/control` and log them in the server terminal. They do not control motors until `/api/control` is connected to the Pi's motor or flight-controller API.
+
+## API
+
+`POST /api/control`
+
+```json
+{ "command": "forward" }
 ```
 
-## Safety
+Valid commands are `forward`, `back`, `left`, `right`, `rotate-left`, and `rotate-right`.
 
-- Remove the propellers for every setup step and first test.
-- The ESP8285 firmware (`firmware/`) is only for the drone's receiver chip.
-  Never flash it to the flight controller or through Betaflight Configurator.
-- Back up the receiver before replacing its firmware (`backupinstructions.txt`).
-- Both apps arm only after a 3-second Start hold with centred sticks, and stop
-  the motors through Betaflight's failsafe if the link, gamepad or app fails.
+`POST /api/stats`
+
+```json
+{ "ping_times": [{ "name": "my laptop", "time": 0.5 }] }
+```
+
+`GET /api/stats` returns the latest submitted ping values.
