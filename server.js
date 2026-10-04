@@ -7,8 +7,24 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(import.meta.dirname, "public"))); // serve /public
 
+// [ { "name": "my laptop", "time": 0.05 } ]
+let avg_times = [];
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(import.meta.dirname, "index.html"));
+});
+
+app.post("/api/stats", (req, res) => {  
+  // [ { "name": "my laptop", "time": 0.05 } ]
+  const { ping_times } = req.body;
+  if (ping_times === null || ping_times === undefined) {
+    console.error("[-] Invalid ping_times JSON payload!s")
+    return res.status(400).send("FAIL");
+  }
+
+  avg_times = ping_times;
+  console.log("[*] AVG-TIMES:", avg_times);
+  return res.send("OK");
 });
 
 app.get("/api/ping", (req, res) => {
