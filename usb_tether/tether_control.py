@@ -31,7 +31,7 @@ from pathlib import Path
 import pygame
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "wifi-2.4ghz"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gamepad_control import (ARM_HOLD_SECONDS, DEFAULT_HOVER_THROTTLE_US, axis, button,
                              controls_are_neutral, deadzone, throttle_target, trigger)
